@@ -8,6 +8,10 @@ def highlight_tier(bv, tier, color):
         for sym in bv.get_symbols_by_name(fn):
             for ref in bv.get_code_refs(sym.address):
                 ref.function.set_user_instr_highlight(ref.address, color)
+                # time to do some non destructive commenting
+                existing = bv.get_comment_at(ref.address)
+                comment = "Red: Critical, Orange: High, Yellow: Medium"
+                bv.set_comment_at(ref.address, existing + comment)
 
 
 def identify_danger(bv, function):
@@ -131,44 +135,5 @@ def identify_danger(bv, function):
     highlight_tier(bv, tier1, HighlightStandardColor.OrangeHighlightColor)
     highlight_tier(bv, tier2, HighlightStandardColor.YellowHighlightColor)
     all_tiers = set(tier0 + tier1 + tier2)
-    print(len(all_tiers))
-    for fn in all_tiers:
-        foo = bv.get_functions_by_name(fn)
-        if foo is not None and len(foo) > 0:
-            list_calls(bv, foo[0])
 
-def get_functions(bv, name):
-    # TODO: I have the impression this can be made more efficient
-    functions = []
-    symbol_table = bv.get_symbols()
-    for symbol in symbol_table:
-        if symbol.full_name == name and symbol.sym_type is not Symbol.ExternalSymbol:
-            functions.append(bv.get_functions_containing(symbol.addr))
-    return functions
-
-def list_calls(bv, dst_function):
-    name = dst_function.name
-    addr = dst_function.start
-    refs = bv.get_code_refs(addr)
-    print("%s is called from:" % name, end='')
-    for ref in refs:
-        if ref.function.is_call_instruction(ref.address):
-            srcs = bv.get_functions_containing(ref.address)
-            if srcs is not None:
-                for src_fn in srcs:
-                    print("\t0x%x in %s" % (ref.address, src_fn.name))
-                    # time to do some non destructive commenting
-                    existing = bv.get_comment_at(ref.address)
-                    comment = "Red: Critical, Orange: High, Yellow: Medium"
-                    bv.set_comment_at(ref.address, existing + comment)
-                    if src_fn.name != "_start":
-                        list_calls(bv,src_fn)
-                    else:
-                        print("-" * 20)
-        else:
-            print("\n")
-
-# maybe this can be enabled ...
-#    show_message_box("Identify dangerous C functions", "Identifying potentially dangerous C functions", MessageBoxButtonSet.OKButtonSet, MessageBoxIcon.InformationIcon)
-
-PluginCommand.register_for_address("Identify dangerous C functions", "Identifies and color codes dangerous and potentially dangerous C functions", identify_danger)
+PluginCommand.register_for_address("Highlight dangerous C functions", "Identifies and color codes dangerous and potentially dangerous C functions", identify_danger)
